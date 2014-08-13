@@ -10,16 +10,17 @@ MinimumMovement := 10             ; Minimum distance before starting to move/res
 SnapToGrid := True                ; Snap to grid?
 SnapToWindows := True             ; Snap to surrounding windows?
 MoveToTopToMaximize := True       ; Maximize the window if it is moved to the top of the screen?
-TopPos := 0                       ; Y-Coord of the top of the screen
+TopPos := ScreenY                 ; Y-Coord of the top of the screen
 MoveToBottomToClose := True       ; Minimize the window if it is moved to the bottom of the screen?
-BottomPos := 1079                 ; Y-Coord of the bottom of the screen
+BottomPos := ScreenH-1            ; Y-Coord of the bottom of the screen
 
 ; Grid and preview
 VisibleGrid := False              ; Display the grid?
-ColorGrid := 0x8B998A             ; Colour of the grid
+ColorGrid := 0xA2B2A1             ; Colour of the grid
 TransparencyGrid := 128           ; Transparency of the grid
 ColorPreview := 0xA2B2A1          ; Colour of the preview
 TransparencyPreview := 128        ; Transparency of the preview
+AnimationDuration := 150          ; How long the preview animation lasts (ms)
 
 ; The default config results in this grid:
 ; +----+----+
@@ -49,7 +50,7 @@ HotkeyMove := "MButton"           ; Leave blank to disable
 HotkeyResize := "RButton"         ; Leave blank to disable
 HotkeyMoveResize := "LButton"     ; Leave blank to disable
 
-HotkeyModifier := ">!" ; HotkeyModifier is prefixed to each hotkey, but can be released once the hotkey has activated.
+HotkeyModifier := "!" ; HotkeyModifier is prefixed to each hotkey, but can be released once the hotkey has activated.
 
 ; END OF CONFIG
 
@@ -75,9 +76,9 @@ Return
 
 Finalise:
 	If (HotkeyMove)
-		Hotkey, % "~" . HotkeyModifier . HotkeyMove, MoveWindow
+		Hotkey, % HotkeyModifier . HotkeyMove, MoveWindow
 	If (HotkeyResize)
-		Hotkey, % "~" . HotkeyModifier . HotkeyResize, ResizeWindow
+		Hotkey, % HotkeyModifier . HotkeyResize, ResizeWindow
 	PreviewID := CreatePreview()
 	If (VisibleGrid) {
 		CreateBitmap()
@@ -90,14 +91,18 @@ MoveWindow:
 Return
 
 MoveWindow() {
-	MouseGetPos, X, Y, WinId
+	MouseGetPos, X, Y, WinId, 
 	OrigX := X, OrigY := Y
 	WinTitle := "ahk_id " . WinId
 	DrawWindow(WinTitle)
+	WinGetPos, WinX, WinY, WinW, WinH, % WinTitle
+	InitializePreviewAt(WinX, WinY, WinW, WinH)
 	MoveWindowDo(OrigX, OrigY, WinTitle)
-	HidePreview()
+	HidePreviewAfterAnimation()
+	GoSub, UpdatePreviewPosition
 	UndrawWindow(WinTitle)
 }
+
 MoveWindowDo(OrigX, OrigY, WinTitle) {
 	Global MinimumMovement, MoveToTopToMaximize, TopPos, MoveToBottomToClose, BottomPos, HotkeyMove, HotkeyMoveResize
 	While 1 {
@@ -112,7 +117,6 @@ MoveWindowDo(OrigX, OrigY, WinTitle) {
 		}
 	}
 
-
 	Left := 0, Right = 0, Top = 0, Bottom = 0
 	While (GetKeyState(HotkeyMove, "P")) {
 		If (HotkeyMoveResize and GetKeyState(HotkeyMoveResize, "P")) {
@@ -125,9 +129,14 @@ MoveWindowDo(OrigX, OrigY, WinTitle) {
 			MoveWindowDo(X, Y, WinTitle)
 			Return
 		}
+		If (MoveToBottomToClose and Y = BottomPos) {
+			MinimizePreview()
+			MoveWindowDo(X, Y, WinTitle)
+			Return
+		}
 		Left := 0, Right = 0, Top = 0, Bottom = 0
 		If (GetBestTile(X, Y, Left, Right, Top, Bottom))
-			ShowPreviewAtTile(Left, Right, Top, Bottom)
+			MovePreviewToTile(Left, Right, Top, Bottom)
 	}
 	WinRestore, % WinTitle
 	MoveWindowToTile(WinTitle, Left, Right, Top, Bottom)
@@ -153,7 +162,7 @@ MoveResizeWindowDo(WinTitle) {
 		}
 		Left := 0, Right = 0, Top = 0, Bottom = 0
 		If (GetBoundingTile(OrigX, OrigY, X, Y, Left, Right, Top, Bottom))
-			ShowPreviewAtTile(Left, Right, Top, Bottom)
+			MovePreviewToTile(Left, Right, Top, Bottom)
 	}
 	WinRestore, % WinTitle
 	MoveWindowToTile(WinTitle, Left, Right, Top, Bottom)
@@ -164,13 +173,15 @@ ResizeWindow:
 Return
 
 ResizeWindow() {
-	MouseGetPos, X, Y, WinId
+	MouseGetPos, X, Y, WinId, startTime
 	OrigX := X, OrigY := Y
 	WinTitle := "ahk_id " . WinId
 	DrawWindow(WinTitle)
+	WinGetPos, WinX, WinY, WinW, WinH, % WinTitle
+	InitializePreviewAt(WinX, WinY, WinW, WinH)
 	ResizeWindowDo(OrigX, OrigY, WinTitle)
-	UndrawWindow(WinTitle)
 	HidePreview()
+	UndrawWindow(WinTitle)
 }
 
 ResizeWindowDo(OrigX, OrigY, WinTitle, IsMove=False) {
@@ -211,7 +222,7 @@ ResizeWindowDo(OrigX, OrigY, WinTitle, IsMove=False) {
 
 ResizeMoveWindowDo(OrigX, OrigY, WinTitle) {
 	Global HotkeyResize, HotkeyMoveResize, MoveToTopToMaximize, TopPos, MarginWidth, MarginWidthHalf, SnapToWindows, SnapToGrid
-		WinGetPos, WinX, WinY, WinW, WinH, % WinTitle
+	WinGetPos, WinX, WinY, WinW, WinH, % WinTitle
 	NewX := WinX
 	NewY := WinY
 	While (GetKeyState(HotkeyResize, "P")) {
@@ -220,41 +231,38 @@ ResizeMoveWindowDo(OrigX, OrigY, WinTitle) {
 			Return
 		}
 		MouseGetPos, X, Y
-		If (MoveToTopToMaximize and Y = TopPos) {
-			MaximizePreview()
-			ResizeWindowDo(X, Y, WinTitle, True) 
-			Return
-		}
 		NewX := X - OrigX + WinX
 		NewY := Y - OrigY + WinY
-		If (SnapToWindows) {
+		If (SnapToGrid) {
+			Index := LoopVs(True, NewX, NewY, 0, 1)
+			If (Index)
+				NewX := GetX(Index) + (GetCornerV(Index) ? MarginWidth : MarginWidthHalf)
+			Else {
+				Index := LoopVs(False, NewX + WinW, NewY, 0, 1)
+				If (Index)
+					NewX := GetX(Index) - WinW - (GetCornerV(Index) ? MarginWidth : MarginWidthHalf)
+			}
+
+			Index := LoopHs(True, NewX, NewY, 0, 1)
+			If (Index)
+				NewY := GetY(Index) + (GetCornerH(Index) ? MarginWidth : MarginWidthHalf)
+			Else {
+				Index := LoopHs(False, NewX, NewY + WinH, 0, 1)
+				If (Index)
+					NewY := GetY(Index) - WinH - (GetCornerH(Index) ? MarginWidth : MarginWidthHalf)
+			}
+		} If (SnapToWindows) {
 			OldX := NewX
 			NewX := LoopWindows(True, True, NewX, NewY, WinTitle, WinW)
 			If (OldX = NewX)
 				NewX := LoopWindows(True, False, NewX + WinW, NewY, WinTitle, WinH) - WinW
-		} If (SnapToGrid) {
-			Index := LoopVs(True, NewX, NewY, 0, 1)
-			If (Index)
-				NewX := GetX(Index) + (GetCornerV(Index) ? MarginWidth : MarginWidthHalf)
-			Else
-				Index := LoopVs(False, NewX + WinW, NewY, 0, 1)
-				If (Index)
-					NewX := GetX(Index) + (GetCornerV(Index) ? MarginWidth : MarginWidthHalf)
-		} If (SnapToWindows) {
+
 			OldY := NewY
 			NewY := LoopWindows(False, True, NewX, NewY, WinTitle, WinW)
 			If (OldY = NewY)
 				NewY := LoopWindows(False, False, NewX, NewY + WinH, WinTitle, WinH) - WinH
-		} If (SnapToGrid) {
-			Index := LoopHs(True, NewX, NewY, 0, 1)
-			If (Index)
-				NewY := GetY(Index) + (GetCornerH(Index) ? MarginWidth : MarginWidthHalf)
-			Else
-				Index := LoopHs(False, NewX, NewY + WinH, 0, 1)
-				If (Index)
-					NewY := GetY(Index) + (GetCornerH(Index) ? MarginWidth : MarginWidthHalf)
 		}
-		ShowPreview(NewX, NewY, WinW, WinH)
+		ShowPreviewAt(NewX, NewY, WinW, WinH)
 	}
 	If (MoveToTopToMaximize and Y = TopPos)
 		WinMaximize, % WinTitle
@@ -310,7 +318,7 @@ ResizeResizeWindowDo(OrigX, OrigY, WinTitle, HorizontalResize, VerticalResize, W
 					NewY1 := GetY(Index) - (GetCornerH(Index) ? MarginWidth : MarginWidthHalf)
 			}
 		}
-		ShowPreview(NewX0, NewY0, NewX1 - NewX0, NewY1 - NewY0)
+		ShowPreviewAt(NewX0, NewY0, NewX1 - NewX0, NewY1 - NewY0)
 	}
 	WinMove, % WinTitle, , % NewX0, % NewY0, % NewX1 - NewX0, % NewY1 - NewY0
 }
@@ -324,23 +332,134 @@ MoveWindowToTile(Title, Left, Right, Top, Bottom) {
 	WinMove, % Title,, % X, % Y, % Width, % Height
 }
 
-ShowPreviewAtTile(Left, Right, Top, Bottom) {
+MovePreviewToTile(Left, Right, Top, Bottom) {
 	Global MarginWidth, MarginWidthHalf
 	X := GetX(Left) + (GetCornerV(Left) ? MarginWidth : MarginWidthHalf)
 	Y := GetY(Top) + (GetCornerH(Top) ? MarginWidth : MarginWidthHalf)
-	W := GetX(Right) - X - (GetCornerV(Right) ? MarginWidth : MarginWidthHalf)
-	H := GetY(Bottom) - Y - (GetCornerH(Bottom) ? MarginWidth : MarginWidthHalf)
-	Gui, 2:Show, % "x" . X . " y" . Y . " w" . W . " h" . H
+	Width := GetX(Right) - X - (GetCornerV(Right) ? MarginWidth : MarginWidthHalf)
+	Height := GetY(Bottom) - Y  - (GetCornerH(Bottom) ? MarginWidth : MarginWidthHalf)
+	MovePreviewTo(X, Y, Width, Height)
 }
-ShowPreview(X, Y, W, H) {
-	Gui, 2:Show, % "x" . X . " y" . Y . " w" . W . " h" . H
+
+MovePreviewTo(X, Y, W, H) {
+	Global startX, startY, startW, startH, nowX, nowY, nowW, nowH, targX, targY, targW, targH, startTime, hidePreview
+
+	if (targX == X and targY == Y and targW == W and targH == H) {
+		Return
+	}
+	if (nowX == X and nowY == Y and nowW == W and nowH == H) {
+		Return
+	}
+
+	hidePreview := False
+
+	startX := nowX
+	startY := nowY
+	startW := nowW
+	startH := nowH
+
+	targX := X
+	targY := Y
+	targW := W
+	targH := H
+
+	startTime := A_TickCount
+
+	SetTimer, UpdatePreviewPosition, 10
 }
+
+Bezier(t, p0, p1, p2, p3) {
+	ti := (1-t)
+	return ti*ti*ti*p0 + 3*ti*ti*t*p1 + 3*ti*t*t*p2 + t*t*t*p3
+}
+
+SearchBezier(target, x1, y1, x2, y2) {
+	tolerance := 0.0001
+
+	min := 0
+	max := 1
+	percent := 0.5
+
+	x := Bezier(percent, 0, x1, x2, 1)
+
+	while (Abs(target - x) > tolerance) {
+		if (target > x)
+			min := percent
+		else
+			max := percent
+		percent := (min + max) / 2
+		x := Bezier(percent, 0, x1, x2, 1)
+	}
+	return Bezier(percent, 0, y1, y2, 1)
+}
+
+Ease(start, targ, startTime) {
+	Global AnimationDuration
+	nowTime := A_TickCount - startTime
+	if (nowTime >= AnimationDuration) {
+		Return targ
+	} else {
+		Return start + SearchBezier(nowTime/AnimationDuration, 0.4, 0, 0.2, 1)*(targ-start)
+	}
+}
+
+UpdatePreviewPosition:
+	nowX := Ease(startX, targX, startTime)
+	nowY := Ease(startY, targY, startTime)
+	nowW := Ease(startW, targW, startTime)
+	nowH := Ease(startH, targH, startTime)
+
+	if (A_TickCount - startTime >= AnimationDuration) {
+		SetTimer, UpdatePreviewPosition, Off
+		if (hidePreview) {
+			HidePreview()
+		} else {
+			ShowPreviewAt(nowX, nowY, nowW, nowH)
+		}
+	} else {
+		ShowPreviewAt(nowX, nowY, nowW, nowH)
+	}
+Return
+
+InitializePreviewAt(WinX, WinY, WinW, WinH) {
+	Global targX, targY, targW, targH, nowX, nowY, nowW, nowH, startTime
+	targX := WinX
+	targY := WinY
+	targW := WinW
+	targH := WinH
+	nowX := WinX
+	nowY := WinY
+	nowW := WinW
+	nowH := WinH
+	startTime := 0
+	ShowPreviewAt(WinX, WinY, WinW, WinH)
+	MovePreviewTo(WinX, WinY, WinW, WinH)
+}
+
 MaximizePreview() {
 	Global ScreenX, ScreenY, ScreenW, ScreenH
-	Gui, 2:Show, % "x" . ScreenX . " y" . ScreenY . " w" . ScreenW . " h" . ScreenH
+	MovePreviewTo(ScreenX, ScreenY, ScreenW, ScreenH)
 }
+
+MinimizePreview() {
+	Global nowX, nowY, nowW, nowH
+	MovePreviewTo(nowX+nowW/2, nowY+nowH/2, 0, 0)
+}
+
+ShowPreviewAt(X, Y, W, H) {
+	Global nowX, nowY, nowW, nowH, startTime, AnimationDuration
+	Gui, 2:Show, % "x" . X . " y" . Y . " w" . W . " h" . H
+}
+
+HidePreviewAfterAnimation() {
+	Global hidePreview
+	hidePreview := True
+}
+
 HidePreview() {
+	Global hidePreview
 	Gui, 2:Hide
+	hidePreview := False
 }
 
 GetBestTile(MouseX, MouseY, ByRef Left, ByRef Right, ByRef Top, ByRef Bottom) {
