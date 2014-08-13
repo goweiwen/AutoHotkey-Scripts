@@ -113,6 +113,8 @@ MoveWindowDo(OrigX, OrigY, WinTitle) {
 		If (!GetKeyState(HotkeyMove, "P")) {
 			If (MoveToTopToMaximize and OrigY = TopPos)
 				WinMaximize, % WinTitle
+			If (MoveToBottomToClose and OrigY = BottomPos)
+				WinClose, % WinTitle
 			Return
 		}
 	}
