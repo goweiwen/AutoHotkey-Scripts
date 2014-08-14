@@ -125,7 +125,7 @@ MoveWindowDo(OrigX, OrigY, WinTitle) {
 		}
 		MouseGetPos, X, Y
 		if (MoveToTopToMaximize and Y = GetTopPos(X, Y)) {
-			MaximizePreview()
+			MaximizePreview(X, Y)
 			MoveWindowDo(X, Y, WinTitle)
 			return
 		}
@@ -440,7 +440,7 @@ InitializePreviewAt(WinX, WinY, WinW, WinH) {
 	MovePreviewTo(WinX, WinY, WinW, WinH)
 }
 
-MaximizePreview() {
+MaximizePreview(x, y) {
 	Sysget, MonitorCount, 80
 	loop % MonitorCount {
 		Sysget, Monitor, Monitor, % A_Index
