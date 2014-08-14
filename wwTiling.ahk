@@ -174,12 +174,11 @@ return
 
 ResizeWindow() {
 	MouseGetPos, X, Y, WinId, startTime
-	OrigX := X, OrigY := Y
 	WinTitle := "ahk_id " . WinId
 	DrawWindow(WinTitle)
 	WinGetPos, WinX, WinY, WinW, WinH, % WinTitle
 	InitializePreviewAt(WinX, WinY, WinW, WinH)
-	ResizeWindowDo(OrigX, OrigY, WinTitle)
+	ResizeWindowDo(X, Y, WinTitle)
 	HidePreview()
 	UndrawWindow(WinTitle)
 }
@@ -210,8 +209,8 @@ ResizeWindowDo(OrigX, OrigY, WinTitle, IsMove=False) {
 		HorizontalResize := 0
 		VerticalResize := 0
 	} else {
-		HorizontalResize := (X - WinX) * 3 // WinW - 1
-		VerticalResize := (Y - WinY) * 3 // WinH - 1
+		HorizontalResize := (OrigX - WinX) * 3 // WinW - 1
+		VerticalResize := (OrigY - WinY) * 3 // WinH - 1
 	}
 	if (not HorizontalResize and not VerticalResize) {
 		ResizeMoveWindowDo(OrigX, OrigY, WinTitle)
@@ -282,40 +281,48 @@ ResizeResizeWindowDo(OrigX, OrigY, WinTitle, HorizontalResize, VerticalResize, W
 		NewY1 := WinY + WinH
 		if (HorizontalResize == -1) {
 			NewX0 += X - OrigX
-			if (SnapToWindows)
-				NewX0 := LoopWindows(True, True, NewX0, NewY0 + Y - OrigY, WinTitle)
 			if (SnapToGrid) {
 				Index := LoopVs(True, NewX0, Y, 0, 1)
 				if (Index)
 					NewX0 := GetX(Index) + (GetCornerV(Index) ? MarginWidth : MarginWidthHalf)
 			}
+			if (SnapToWindows) {
+				NewX0 := LoopWindows(True, True, NewX0, NewY0, WinTitle)
+				NewX0 := LoopWindows(True, True, NewX0, NewY1, WinTitle)
+			}
 		} else if (HorizontalResize == 1) {
 			NewX1 += X - OrigX
-			if (SnapToWindows)
-				NewX1 := LoopWindows(True, False, NewX1, NewY1 + Y - OrigY, WinTitle)
 			if (SnapToGrid) {
 				Index := LoopVs(False, NewX1, Y, 0, 1)
 				if (Index)
 					NewX1 := GetX(Index) - (GetCornerV(Index) ? MarginWidth : MarginWidthHalf)
 			}
+			if (SnapToWindows) {
+				NewX1 := LoopWindows(True, False, NewX1, NewY0, WinTitle)
+				NewX1 := LoopWindows(True, False, NewX1, NewY1, WinTitle)
+			}
 		}
 		if (VerticalResize == -1) {
 			NewY0 += Y - OrigY
-			if (SnapToWindows)
-				NewY0 := LoopWindows(False, True, NewX0 + X - OrigX, NewY0, WinTitle)
 			if (SnapToGrid) {
 				Index := LoopHs(True, X, NewY0, 0, 1)
 				if (Index)
 					NewY0 := GetY(Index) + (GetCornerH(Index) ? MarginWidth : MarginWidthHalf)
 			}
+			if (SnapToWindows) {
+				NewY0 := LoopWindows(False, True, NewX0, NewY0, WinTitle)
+				NewY0 := LoopWindows(False, True, NewX1, NewY0, WinTitle)
+			}
 		} else if (VerticalResize == 1) {
 			NewY1 += Y - OrigY
-			if (SnapToWindows)
-				NewY1 := LoopWindows(False, False, NewX1 + X - OrigX, NewY1, WinTitle)
 			if (SnapToGrid) {
 				Index := LoopHs(False, X, NewY1, 0, 1)
 				if (Index)
 					NewY1 := GetY(Index) - (GetCornerH(Index) ? MarginWidth : MarginWidthHalf)
+			}
+			if (SnapToWindows) {
+				NewY1 := LoopWindows(False, False, NewX0, NewY1, WinTitle)
+				NewY1 := LoopWindows(False, False, NewX1, NewY1, WinTitle)
 			}
 		}
 		ShowPreviewAt(NewX0, NewY0, NewX1 - NewX0, NewY1 - NewY0)
@@ -422,7 +429,9 @@ UpdatePreviewPosition:
 return
 
 InitializePreviewAt(WinX, WinY, WinW, WinH) {
-	global targX, targY, targW, targH, nowX, nowY, nowW, nowH, startTime
+	global targX, targY, targW, targH, nowX, nowY, nowW, nowH, startTime, hidePreview
+
+	hidePreview := false
 
 	targX := WinX
 	targY := WinY
@@ -437,14 +446,13 @@ InitializePreviewAt(WinX, WinY, WinW, WinH) {
 	startTime := 0
 	
 	ShowPreviewAt(WinX, WinY, WinW, WinH)
-	MovePreviewTo(WinX, WinY, WinW, WinH)
 }
 
-MaximizePreview(x, y) {
-	Sysget, MonitorCount, 80
+MaximizePreview(X, Y) {
+	SysGet, MonitorCount, 80
 	loop % MonitorCount {
-		Sysget, Monitor, Monitor, % A_Index
-		if (MonitorLeft <= x and x < MonitorRight and MonitorTop <= y and y < MonitorBottom)
+		SysGet, Monitor, Monitor, % A_Index
+		if (MonitorLeft <= X and Y < MonitorRight and MonitorTop <= Y and Y < MonitorBottom)
 			MovePreviewTo(MonitorLeft, MonitorTop, MonitorRight - MonitorLeft, MonitorBottom - MonitorTop)
 			return
 	}
@@ -567,7 +575,7 @@ LoopWindows(IsHorizontal, IsReversed, X, Y, WinTitle, Length=0) {
 		if (WinMinMax != 0)
 			Continue
 		WinGetPos, WinX, WinY, WinW, WinH, % "ahk_id" . id%A_Index%
-		if (IsHorizontal ? (WinY - MarginWidth - Length < Y and Y < WinY + WinH + MarginWidth + Length) : (WinX - MarginWidth - Length < X and X < WinX + WinW + MarginWidth + Length)) {
+		if (IsHorizontal ? (WinY - MarginWidth - Length <= Y and Y <= WinY + WinH + MarginWidth + Length) : (WinX - MarginWidth - Length <= X and X <= WinX + WinW + MarginWidth + Length)) {
 			NewDistance := IsHorizontal ? abs(WinX - X) : abs(WinY - Y)
 			if (NewDistance < BestDistance) {
 				NewPos := (IsHorizontal ? WinX : WinY) + MarginWidth * (IsReversed ? 0 : -1)
@@ -647,19 +655,19 @@ UndrawWindow(title) {
 	if (VisibleGrid)
 		HideGrid()
 }
-GetBottomPos(x, y) {
-	Sysget, MonitorCount, 80
+GetBottomPos(X, Y) {
+	SysGet, MonitorCount, 80
 	loop % MonitorCount {
-		Sysget, Monitor, Monitor, % A_Index
-		if (MonitorLeft <= x and x < MonitorRight and MonitorTop <= y and y < MonitorBottom)
+		SysGet, Monitor, Monitor, % A_Index
+		if (MonitorLeft <= X and X < MonitorRight and MonitorTop <= Y and Y < MonitorBottom)
 			return MonitorBottom - 1
 	}
 }
-GetTopPos(x, y) {
-	Sysget, MonitorCount, 80
+GetTopPos(X, Y) {
+	SysGet, MonitorCount, 80
 	loop % MonitorCount {
-		Sysget, Monitor, Monitor, % A_Index
-		if (MonitorLeft <= x and x <= MonitorRight and MonitorTop <= y and y <= MonitorBottom)
+		SysGet, Monitor, Monitor, % A_Index
+		if (MonitorLeft <= X and X < MonitorRight and MonitorTop <= Y and Y < MonitorBottom)
 			return MonitorTop
 	}
 }
