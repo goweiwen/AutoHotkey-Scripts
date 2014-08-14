@@ -283,7 +283,7 @@ ResizeResizeWindowDo(OrigX, OrigY, WinTitle, HorizontalResize, VerticalResize, W
 		if (HorizontalResize == -1) {
 			NewX0 += X - OrigX
 			if (SnapToWindows)
-				NewX0 := LoopWindows(True, True, NewX0, Y, WinTitle)
+				NewX0 := LoopWindows(True, True, NewX0, NewY0 + Y - OrigY, WinTitle)
 			if (SnapToGrid) {
 				Index := LoopVs(True, NewX0, Y, 0, 1)
 				if (Index)
@@ -292,7 +292,7 @@ ResizeResizeWindowDo(OrigX, OrigY, WinTitle, HorizontalResize, VerticalResize, W
 		} else if (HorizontalResize == 1) {
 			NewX1 += X - OrigX
 			if (SnapToWindows)
-				NewX1 := LoopWindows(True, False, NewX1, Y, WinTitle)
+				NewX1 := LoopWindows(True, False, NewX1, NewY1 + Y - OrigY, WinTitle)
 			if (SnapToGrid) {
 				Index := LoopVs(False, NewX1, Y, 0, 1)
 				if (Index)
@@ -302,7 +302,7 @@ ResizeResizeWindowDo(OrigX, OrigY, WinTitle, HorizontalResize, VerticalResize, W
 		if (VerticalResize == -1) {
 			NewY0 += Y - OrigY
 			if (SnapToWindows)
-				NewY0 := LoopWindows(False, True, X, NewY0, WinTitle)
+				NewY0 := LoopWindows(False, True, NewX0 + X - OrigX, NewY0, WinTitle)
 			if (SnapToGrid) {
 				Index := LoopHs(True, X, NewY0, 0, 1)
 				if (Index)
@@ -311,7 +311,7 @@ ResizeResizeWindowDo(OrigX, OrigY, WinTitle, HorizontalResize, VerticalResize, W
 		} else if (VerticalResize == 1) {
 			NewY1 += Y - OrigY
 			if (SnapToWindows)
-				NewY1 := LoopWindows(False, False, X, NewY1, WinTitle)
+				NewY1 := LoopWindows(False, False, NewX1 + X - OrigX, NewY1, WinTitle)
 			if (SnapToGrid) {
 				Index := LoopHs(False, X, NewY1, 0, 1)
 				if (Index)
