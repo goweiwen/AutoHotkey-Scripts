@@ -10,9 +10,7 @@ MinimumMovement := 10             ; Minimum distance before starting to move/res
 SnapToGrid := True                ; Snap to grid?
 SnapToWindows := True             ; Snap to surrounding windows?
 MoveToTopToMaximize := True       ; Maximize the window if it is moved to the top of the screen?
-TopPos := ScreenY                 ; Y-Coord of the top of the screen
 MoveToBottomToClose := True       ; Minimize the window if it is moved to the bottom of the screen?
-BottomPos := ScreenH-1            ; Y-Coord of the bottom of the screen
 
 ; Grid and preview
 VisibleGrid := False              ; Display the grid?
@@ -104,34 +102,34 @@ MoveWindow() {
 }
 
 MoveWindowDo(OrigX, OrigY, WinTitle) {
-	global MinimumMovement, MoveToTopToMaximize, TopPos, MoveToBottomToClose, BottomPos, HotkeyMove, HotkeyMoveResize
-	While 1 {
+	global MinimumMovement, MoveToTopToMaximize, MoveToBottomToClose, HotkeyMove, HotkeyMoveResize
+	while 1 {
 		Sleep 10 ; Sleep until movement exceeds threshold or button is released
 		MouseGetPos, X, Y
 		if (abs(OrigX - X) > MinimumMovement or abs(OrigY - Y) > MinimumMovement)
 			Break
 		if (!GetKeyState(HotkeyMove, "P")) {
-			if (MoveToTopToMaximize and OrigY = TopPos)
+			if (MoveToTopToMaximize and OrigY = GetTopPos(X, Y))
 				WinMaximize, % WinTitle
-			if (MoveToBottomToClose and OrigY = BottomPos)
+			if (MoveToBottomToClose and OrigY = GetBottomPos(X, Y))
 				WinClose, % WinTitle
 			return
 		}
 	}
 
 	Left := 0, Right = 0, Top = 0, Bottom = 0
-	While (GetKeyState(HotkeyMove, "P")) {
+	while (GetKeyState(HotkeyMove, "P")) {
 		if (HotkeyMoveResize and GetKeyState(HotkeyMoveResize, "P")) {
 			MoveResizeWindowDo(WinTitle)
 			return
 		}
 		MouseGetPos, X, Y
-		if (MoveToTopToMaximize and Y = TopPos) {
+		if (MoveToTopToMaximize and Y = GetTopPos(X, Y)) {
 			MaximizePreview()
 			MoveWindowDo(X, Y, WinTitle)
 			return
 		}
-		if (MoveToBottomToClose and Y = BottomPos) {
+		if (MoveToBottomToClose and Y = GetBottomPos(X, Y)) {
 			MinimizePreview()
 			MoveWindowDo(X, Y, WinTitle)
 			return
@@ -142,7 +140,7 @@ MoveWindowDo(OrigX, OrigY, WinTitle) {
 	}
 	WinRestore, % WinTitle
 	MoveWindowToTile(WinTitle, Left, Right, Top, Bottom)
-	if (MoveToBottomToClose and Y = BottomPos) {
+	if (MoveToBottomToClose and Y = GetBottomPos(X, Y)) {
 		WinClose, % WinTitle
 	}
 }
@@ -152,7 +150,7 @@ MoveResizeWindowDo(WinTitle) {
 	MouseGetPos, OrigX, OrigY
 	Left := 0, Right = 0, Top = 0, Bottom = 0
 	Released := False
-	While (GetKeyState(HotkeyMove, "P") or GetKeyState(HotkeyResize, "P")) {
+	while (GetKeyState(HotkeyMove, "P") or GetKeyState(HotkeyResize, "P")) {
 		MouseGetPos, X, Y
 		if (GetKeyState(HotkeyMoveResize, "P")) {
 			if (Released) {
@@ -187,14 +185,14 @@ ResizeWindow() {
 }
 
 ResizeWindowDo(OrigX, OrigY, WinTitle, IsMove=False) {
-	global MinimumMovement, HotkeyResize, MoveToTopToMaximize, TopPos
-	While 1 {
+	global MinimumMovement, HotkeyResize, MoveToTopToMaximize
+	while 1 {
 		Sleep 10 ; Sleep until movement exceeds threshold or button is released
 		MouseGetPos, X, Y
 		if (abs(OrigX - X) > MinimumMovement or abs(OrigY - Y) > MinimumMovement)
 			Break
 		if (!GetKeyState(HotkeyResize, "P")) {
-			if (MoveToTopToMaximize and OrigY = TopPos)
+			if (MoveToTopToMaximize and OrigY = GetTopPos(X, Y))
 				WinMaximize, % WinTitle
 			return
 		}
@@ -223,11 +221,11 @@ ResizeWindowDo(OrigX, OrigY, WinTitle, IsMove=False) {
 }
 
 ResizeMoveWindowDo(OrigX, OrigY, WinTitle) {
-	global HotkeyResize, HotkeyMoveResize, MoveToTopToMaximize, TopPos, MarginWidth, MarginWidthHalf, SnapToWindows, SnapToGrid
+	global HotkeyResize, HotkeyMoveResize, MoveToTopToMaximize, MarginWidth, MarginWidthHalf, SnapToWindows, SnapToGrid
 	WinGetPos, WinX, WinY, WinW, WinH, % WinTitle
 	NewX := WinX
 	NewY := WinY
-	While (GetKeyState(HotkeyResize, "P")) {
+	while (GetKeyState(HotkeyResize, "P")) {
 		if (HotkeyMoveResize and GetKeyState(HotkeyMoveResize, "P")) {
 			MoveResizeWindowDo(WinTitle)
 			return
@@ -266,7 +264,7 @@ ResizeMoveWindowDo(OrigX, OrigY, WinTitle) {
 		}
 		ShowPreviewAt(NewX, NewY, WinW, WinH)
 	}
-	if (MoveToTopToMaximize and Y = TopPos)
+	if (MoveToTopToMaximize and Y = GetTopPos(X, Y))
 		WinMaximize, % WinTitle
 	else {
 		WinRestore, % WinTitle
@@ -276,7 +274,7 @@ ResizeMoveWindowDo(OrigX, OrigY, WinTitle) {
 
 ResizeResizeWindowDo(OrigX, OrigY, WinTitle, HorizontalResize, VerticalResize, WinX, WinY, WinW, WinH) {
 	global HotkeyResize, MarginWidth, MarginWidthHalf, SnapToWindows, SnapToGrid
-	While (GetKeyState(HotkeyResize, "P")) {
+	while (GetKeyState(HotkeyResize, "P")) {
 		MouseGetPos, X, Y
 		NewX0 := WinX
 		NewY0 := WinY
@@ -425,15 +423,19 @@ return
 
 InitializePreviewAt(WinX, WinY, WinW, WinH) {
 	global targX, targY, targW, targH, nowX, nowY, nowW, nowH, startTime
+
 	targX := WinX
 	targY := WinY
 	targW := WinW
 	targH := WinH
+
 	nowX := WinX
 	nowY := WinY
 	nowW := WinW
 	nowH := WinH
+
 	startTime := 0
+	
 	ShowPreviewAt(WinX, WinY, WinW, WinH)
 	MovePreviewTo(WinX, WinY, WinW, WinH)
 }
@@ -551,10 +553,13 @@ LoopWindows(IsHorizontal, IsReversed, X, Y, WinTitle, Length=0) {
 	WinGet, id, list,,, Program Manager
 	loop, % id
 	{
-		WinGet, WinExStyle, ExStyle, % WinTitle
-		if (WinExStyle & 0x80 or id%A_Index% = CurrentWindow)
-			Continue
 		if ("ahk_id " . id%A_Index% = WinTitle or id%A_Index% = PreviewID)
+			Continue
+		WinGet, WinExStyle, ExStyle, % WinTitle
+		if (WinExStyle & 0x80)
+			Continue
+		WinGet, WinMinMax, MinMax, % WinTitle
+		if (WinMinMax != 0)
 			Continue
 		WinGetPos, WinX, WinY, WinW, WinH, % "ahk_id" . id%A_Index%
 		if (IsHorizontal ? (WinY - MarginWidth - Length < Y and Y < WinY + WinH + MarginWidth + Length) : (WinX - MarginWidth - Length < X and X < WinX + WinW + MarginWidth + Length)) {
@@ -629,17 +634,29 @@ GetResizeH(index) {
 DrawWindow(title) {
 	global VisibleGrid
 	WinActivate, % title
-	WinSet, AlwaysOnTop, On, % title
-	; WinSet, Transparent, 212, % title
 	if (VisibleGrid)
 		ShowGrid()
 }
 UndrawWindow(title) {
 	global VisibleGrid
-	WinSet, AlwaysOnTop, Off, % title
-	; WinSet, Transparent, Off, % title
 	if (VisibleGrid)
 		HideGrid()
+}
+GetBottomPos(x, y) {
+	Sysget, MonitorCount, 80
+	loop % MonitorCount {
+		Sysget, Monitor, Monitor, % A_Index
+		if (MonitorLeft <= x and x < MonitorRight and MonitorTop <= y and y < MonitorBottom)
+			return MonitorBottom - 1
+	}
+}
+GetTopPos(x, y) {
+	Sysget, MonitorCount, 80
+	loop % MonitorCount {
+		Sysget, Monitor, Monitor, % A_Index
+		if (MonitorLeft <= x and x <= MonitorRight and MonitorTop <= y and y <= MonitorBottom)
+			return MonitorTop
+	}
 }
 
 CreateBitmap() {
