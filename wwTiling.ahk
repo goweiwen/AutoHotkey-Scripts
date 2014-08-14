@@ -441,8 +441,13 @@ InitializePreviewAt(WinX, WinY, WinW, WinH) {
 }
 
 MaximizePreview() {
-	global ScreenX, ScreenY, ScreenW, ScreenH
-	MovePreviewTo(ScreenX, ScreenY, ScreenW, ScreenH)
+	Sysget, MonitorCount, 80
+	loop % MonitorCount {
+		Sysget, Monitor, Monitor, % A_Index
+		if (MonitorLeft <= x and x < MonitorRight and MonitorTop <= y and y < MonitorBottom)
+			MovePreviewTo(MonitorLeft, MonitorTop, MonitorRight - MonitorLeft, MonitorBottom - MonitorTop)
+			return
+	}
 }
 
 MinimizePreview() {
