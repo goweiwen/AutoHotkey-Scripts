@@ -1,6 +1,6 @@
 CopyColour := True
 DoubleClick := True
-HotkeyInfo := "~>!LButton"
+HotkeyInfo := "~!LButton"
 
 ; END OF CONFIG
 
@@ -43,12 +43,15 @@ InfoWindow() {
 	Color := SubStr(Color, 3)
 	If (CopyColour)
 		Clipboard := Color
-	R := "0x" . SubStr(Color, 1, 2)
-	R := R / 255
-	G := "0x" . SubStr(Color, 3, 2)
-	G := G / 255
-	B := "0x" . SubStr(Color, 5, 2)
-	B := B / 255
+	Red := "0x" . SubStr(Color, 1, 2)
+	R := Red / 255
+	Red := Red + 0
+	Green := "0x" . SubStr(Color, 3, 2)
+	G := Green / 255
+	Green := Green + 0
+	Blue := "0x" . SubStr(Color, 5, 2)
+	B := Blue / 255
+	Blue := Blue + 0
 	RGBMin := R < G ? (R < B ? R : B) : (G < B ? G : B)
 	RGBMax := R > G ? (R > B ? R : B) : (G > B ? G : B)
 	Hue := 0
@@ -67,7 +70,7 @@ InfoWindow() {
 	Hue := Round(Hue * 255, 0)
 	Saturation := Round(Saturation * 255, 0)
 	Lightness := Round(Lightness * 255, 0)
-	ToolTip, % Color . "`tX: " . X . "`nH: " . Hue . "`tY: " . Y . "`nS: " . Saturation . "`tW: " . Length . "`nL: " . Lightness . "`tH: " . Height . "`n`tD: " . D
+	ToolTip, % "#" . Color . "`nH: " . Hue . "`tR: " . Red . "`nS: " . Saturation . "`tG: " . Green . "`nL: " . Lightness . "`tB: " . Blue . "`n`nX: " . X . "`tY: " . Y . "`nW: " . Length . "`tH: " . Height . "`nDistance: " . D
 	SetTimer, RemoveToolTip, 5000
 }
 
