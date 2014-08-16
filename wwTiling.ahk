@@ -452,9 +452,10 @@ MaximizePreview(X, Y) {
 	SysGet, MonitorCount, 80
 	loop % MonitorCount {
 		SysGet, Monitor, Monitor, % A_Index
-		if (MonitorLeft <= X and Y < MonitorRight and MonitorTop <= Y and Y < MonitorBottom)
+		if (MonitorLeft <= X and X < MonitorRight and MonitorTop <= Y and Y < MonitorBottom) {
 			MovePreviewTo(MonitorLeft, MonitorTop, MonitorRight - MonitorLeft, MonitorBottom - MonitorTop)
 			return
+		}
 	}
 }
 
