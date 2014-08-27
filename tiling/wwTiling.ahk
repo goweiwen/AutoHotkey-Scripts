@@ -1,87 +1,32 @@
-GoSub Initialise
+CoordMode, Mouse, Screen
+CoordMode, Pixel, Screen
+#SingleInstance, Force
+#NoEnv  ; Recommended for performance and compatibility with future AutoHotkey releases.
+; #Warn  ; Recommended for catching common errors.
+SendMode Input  ; Recommended for new scripts due to its superior speed and reliability.
+SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
+SetBatchLines, -1
+SetWinDelay, -1
 
-; Pixel Values
-MarginWidth := 8                  ; Margin (px)
-MarginWidthHalf := MarginWidth//2 ; Margin of edges (px)
-SnapDistance := 16                ; Minimum distance from lines before snapping (px)
-MinimumMovement := 10             ; Minimum distance before starting to move/resize window (px)
+SysGet, ScreenX, 76 ; SM_XVIRTUALSCREEN
+SysGet, ScreenY, 77 ; SM_YVIRTUALSCREEN
+SysGet, ScreenW, 78 ; SM_CXVIRTUALSCREEN
+SysGet, ScreenH, 79 ; SM_CYVIRTUALSCREEN
 
-; Toggles
-SnapToGrid := True                ; Snap to grid?
-SnapToWindows := True             ; Snap to surrounding windows?
-MoveToTopToMaximize := True       ; Maximize the window if it is moved to the top of the screen?
-MoveToBottomToClose := True       ; Minimize the window if it is moved to the bottom of the screen?
+#include config.ahk
 
-; Grid and preview
-VisibleGrid := False              ; Display the grid?
-ColorGrid := 0xA2B2A1             ; Colour of the grid
-TransparencyGrid := 128           ; Transparency of the grid
-ColorPreview := 0xA2B2A1          ; Colour of the preview
-TransparencyPreview := 128        ; Transparency of the preview
-AnimationDuration := 150          ; How long the preview animation lasts (ms)
+if (NoTrayIcon)
+	Menu, Tray, NoIcon
 
-; The default config results in this grid:
-; +----+----+
-; |    |    |
-; |    +----+
-; |    |    |
-; +----+----+
-;
-; You can bind your own hotkeys to certain positions using 
-;   MoveWindowToTile(window-title, x0-index, x1-index, y0-index, y1-index)
-; For example:
-;   NumpadIns:: MoveWindowToTile("A", 1, 3, 1, 2)
-
-; V[n]:= [ x-coord, y0-index, y1-index, corner?, resize-only?]
-V := []
-V[1] := [ ScreenX,                  1,  3,  1, 0 ]
-V[2] := [ ScreenX+ScreenW/2,        1,  3,  0, 0 ]
-V[3] := [ ScreenX+ScreenW,          1,  3,  1, 0 ]
- 
-; H[n]:= [ y-coord, x0-index, x1-index, corner?, resize-only?]
-H := []
-H[1] := [ ScreenY,                  1,  3,  1, 0 ]
-H[2] := [ ScreenY+(ScreenH-32)/2,   2,  3,  0, 0 ]
-H[3] := [ ScreenY+ScreenH-32,       1,  3,  1, 0 ]
-
-HotkeyMove := "MButton"           ; Leave blank to disable
-HotkeyResize := "RButton"         ; Leave blank to disable
-HotkeyMoveResize := "LButton"     ; Leave blank to disable
-
-HotkeyModifier := "!" ; HotkeyModifier is prefixed to each hotkey, but can be released once the hotkey has activated.
-
-; END OF CONFIG
-
-GoSub Finalise
-return
-
-Initialise:
-	CoordMode, Mouse, Screen
-	CoordMode, Pixel, Screen
-	#SingleInstance, Force
-	#NoEnv  ; Recommended for performance and compatibility with future AutoHotkey releases.
-	; #Warn  ; Recommended for catching common errors.
-	SendMode Input  ; Recommended for new scripts due to its superior speed and reliability.
-	SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
-	SetBatchLines, -1
-	SetWinDelay, -1
-
-	SysGet, ScreenX, 76 ; SM_XVIRTUALSCREEN
-	SysGet, ScreenY, 77 ; SM_YVIRTUALSCREEN
-	SysGet, ScreenW, 78 ; SM_CXVIRTUALSCREEN
-	SysGet, ScreenH, 79 ; SM_CYVIRTUALSCREEN
-return
-
-Finalise:
-	if (HotkeyMove)
-		Hotkey, % HotkeyModifier . HotkeyMove, MoveWindow
-	if (HotkeyResize)
-		Hotkey, % HotkeyModifier . HotkeyResize, ResizeWindow
-	PreviewID := CreatePreview()
-	if (VisibleGrid) {
-		CreateBitmap()
-		CreateGrid()
-	}
+if (HotkeyMove)
+	Hotkey, % HotkeyModifier . HotkeyMove, MoveWindow
+if (HotkeyResize)
+	Hotkey, % HotkeyModifier . HotkeyResize, ResizeWindow
+PreviewID := CreatePreview()
+if (VisibleGrid) {
+	CreateBitmap()
+	CreateGrid()
+}
 return
 
 MoveWindow:
@@ -281,48 +226,48 @@ ResizeResizeWindowDo(OrigX, OrigY, WinTitle, HorizontalResize, VerticalResize, W
 		NewY1 := WinY + WinH
 		if (HorizontalResize == -1) {
 			NewX0 += X - OrigX
+			if (SnapToWindows) {
+				NewX0 := LoopWindows(True, True, NewX0, NewY0, WinTitle)
+				NewX0 := LoopWindows(True, True, NewX0, NewY1, WinTitle)
+			}
 			if (SnapToGrid) {
 				Index := LoopVs(True, NewX0, Y, 0, 1)
 				if (Index)
 					NewX0 := GetX(Index) + (GetCornerV(Index) ? MarginWidth : MarginWidthHalf)
 			}
-			if (SnapToWindows) {
-				NewX0 := LoopWindows(True, True, NewX0, NewY0, WinTitle)
-				NewX0 := LoopWindows(True, True, NewX0, NewY1, WinTitle)
-			}
 		} else if (HorizontalResize == 1) {
 			NewX1 += X - OrigX
+			if (SnapToWindows) {
+				NewX1 := LoopWindows(True, False, NewX1, NewY0, WinTitle)
+				NewX1 := LoopWindows(True, False, NewX1, NewY1, WinTitle)
+			}
 			if (SnapToGrid) {
 				Index := LoopVs(False, NewX1, Y, 0, 1)
 				if (Index)
 					NewX1 := GetX(Index) - (GetCornerV(Index) ? MarginWidth : MarginWidthHalf)
 			}
-			if (SnapToWindows) {
-				NewX1 := LoopWindows(True, False, NewX1, NewY0, WinTitle)
-				NewX1 := LoopWindows(True, False, NewX1, NewY1, WinTitle)
-			}
 		}
 		if (VerticalResize == -1) {
 			NewY0 += Y - OrigY
+			if (SnapToWindows) {
+				NewY0 := LoopWindows(False, True, NewX0, NewY0, WinTitle)
+				NewY0 := LoopWindows(False, True, NewX1, NewY0, WinTitle)
+			}
 			if (SnapToGrid) {
 				Index := LoopHs(True, X, NewY0, 0, 1)
 				if (Index)
 					NewY0 := GetY(Index) + (GetCornerH(Index) ? MarginWidth : MarginWidthHalf)
 			}
-			if (SnapToWindows) {
-				NewY0 := LoopWindows(False, True, NewX0, NewY0, WinTitle)
-				NewY0 := LoopWindows(False, True, NewX1, NewY0, WinTitle)
-			}
 		} else if (VerticalResize == 1) {
 			NewY1 += Y - OrigY
+			if (SnapToWindows) {
+				NewY1 := LoopWindows(False, False, NewX0, NewY1, WinTitle)
+				NewY1 := LoopWindows(False, False, NewX1, NewY1, WinTitle)
+			}
 			if (SnapToGrid) {
 				Index := LoopHs(False, X, NewY1, 0, 1)
 				if (Index)
 					NewY1 := GetY(Index) - (GetCornerH(Index) ? MarginWidth : MarginWidthHalf)
-			}
-			if (SnapToWindows) {
-				NewY1 := LoopWindows(False, False, NewX0, NewY1, WinTitle)
-				NewY1 := LoopWindows(False, False, NewX1, NewY1, WinTitle)
 			}
 		}
 		ShowPreviewAt(NewX0, NewY0, NewX1 - NewX0, NewY1 - NewY0)
@@ -466,7 +411,7 @@ MinimizePreview() {
 
 ShowPreviewAt(X, Y, W, H) {
 	global nowX, nowY, nowW, nowH, startTime, AnimationDuration
-	Gui, 2:Show, % "x" . X . " y" . Y . " w" . W . " h" . H
+	Gui, 2:Show, % "x" . X . " y" . Y . " w" . W . " h" . H, wwTiling Preview
 }
 
 HidePreviewAfterAnimation() {
@@ -742,7 +687,7 @@ CreateGrid() {
 }
 ShowGrid() {
 	global ScreenX, ScreenY, ScreenW, ScreenH
-	Gui, 1:Show, % "x" . ScreenX . " y" . ScreenY . " w" . ScreenW . " h" . ScreenH
+	Gui, 1:Show, % "x" . ScreenX . " y" . ScreenY . " w" . ScreenW . " h" . ScreenH, wwTiling Grid
 }
 HideGrid() {
 	Gui, 1:Hide

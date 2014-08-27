@@ -1,23 +1,20 @@
-CopyColour := True
-DoubleClick := True
-HotkeyInfo := "~!LButton"
+CoordMode, Mouse, Screen
+CoordMode, Pixel, Screen
+#SingleInstance, Force
+#NoEnv  ; Recommended for performance and compatibility with future AutoHotkey releases.
+; #Warn  ; Recommended for catching common errors.
+SendMode Input  ; Recommended for new scripts due to its superior speed and reliability.
+SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
+SetBatchLines, -1
+SetWinDelay, -1
 
-; END OF CONFIG
+#include config.ahk
 
-GoSub Initialise
-Return
+if (NoTrayIcon)
+	Menu, Tray, NoIcon
 
-Initialise:
-	CoordMode, Mouse, Screen
-	CoordMode, Pixel, Screen
-	#SingleInstance, Force
-	SendMode Input  ; Recommended for new scripts due to its superior speed and reliability.
-	SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
-	SetBatchLines, -1
-	SetWinDelay, -1
-	SetTitleMatchMode, RegEx
-	If (HotkeyInfo)
-		Hotkey, % "~" . HotkeyInfo, InfoWindow
+If (HotkeyInfo)
+	Hotkey, % "~" . HotkeyInfo, InfoWindow
 Return
 
 InfoWindow:

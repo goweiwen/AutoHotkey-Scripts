@@ -1,33 +1,17 @@
-﻿programRules := [   { class: "MozillaWindowClass" ; Firefox
-                        , sizebox: 0 }
-                ,   { class: "{E7076D1C-A7BF-4f39-B771-BCBE88F2A2A8}" ; Foobar2000
-                        , all: 0
-                        , redraw: 1 }
-                ,   { class: "CabinetWClass" ; Explorer
-                        , caption: 0
-                        , border: 0 }
-                ,   { class: "µTorrent4823DF041B09" ; uTorrent
-                        , caption: 0
-                        , border: 0 }
-                ,   { class: "PX_WINDOW_CLASS" ; Sublime Text 3
-                        , caption: 0
-                        , border: 0 }
-                ,   { class: "Screen Magnifier Window" ; Magnifier
-                        , all: 0 }
-                ,   { class: "IrfanView" ; Irfanview
-                        , caption: 0    
-                        , border: 0 }
-                ,   { class: "classFoxitReader" ; Foxit Reader
-                        , caption: 0
-                        , border: 0 }
-                ,   { class: "SunAwtFrame" ; Minecraft
-                        , caption: 0
-                        , border: 0
-                        , sizebox: 0 }
-                ,   { title: "Steam - Update News" ; Steam Update News
-                        , close: 1 } ]
+﻿CoordMode, Mouse, Screen
+CoordMode, Pixel, Screen
+#SingleInstance, Force
+#NoEnv  ; Recommended for performance and compatibility with future AutoHotkey releases.
+; #Warn  ; Recommended for catching common errors.
+SendMode Input  ; Recommended for new scripts due to its superior speed and reliability.
+SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
+SetBatchLines, -1
+SetWinDelay, -1
 
-AdjustOnRedraw := 0
+#include config.ahk
+
+if (NoTrayIcon)
+    Menu, Tray, NoIcon
 
 adjustAllWindows()
 GoSub, HookWindow
