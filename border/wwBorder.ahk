@@ -15,7 +15,7 @@ if (NoTrayIcon)
 
 adjustAllWindows()
 GoSub, HookWindow
-Sleep,10000
+Sleep,100
 adjustAllWindows()
 Return
 
