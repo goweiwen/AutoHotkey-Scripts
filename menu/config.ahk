@@ -3,8 +3,8 @@ Favorites.insert(["Computer", "Computer", "::{20D04FE0-3AEA-1069-A2D8-08002B3030
 Favorites.insert(["Desktop", "%USERPROFILE%\Desktop"])
 Favorites.insert(["Downloads", "%USERPROFILE%\Downloads"])
 Favorites.insert(["Dropbox", "%USERPROFILE%\Dropbox"])
-Favorites.insert(["Documents", "%USERPROFILE%\My Documents"])
-Favorites.insert(["Videos", "%USERPROFILE%\My Videos"])
+Favorites.insert(["Documents", "%USERPROFILE%\Documents"])
+Favorites.insert(["Videos", "%USERPROFILE%\Videos"])
 Favorites.insert(["Music", "%USERPROFILE%\Music"])
 Favorites.insert(["Recycle Bin", "Recycle Bin"])
 
