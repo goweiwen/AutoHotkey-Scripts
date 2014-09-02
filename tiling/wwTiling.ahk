@@ -202,7 +202,7 @@ ResizeMoveWindowDo(OrigX, OrigY, WinTitle) {
 				NewX := LoopWindows(True, False, NewX + WinW, NewY, WinTitle, WinH) - WinW
 
 			OldY := NewY
-			NewY := LoopWindows(False, True, NewX, NewY, WinTitle, WinW)
+			NewY := LoopWindows(False, True, NewX, NewY, WinTitle, WinH)
 			if (OldY = NewY)
 				NewY := LoopWindows(False, False, NewX, NewY + WinH, WinTitle, WinH) - WinH
 		}
