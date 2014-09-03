@@ -177,7 +177,17 @@ ResizeMoveWindowDo(OrigX, OrigY, WinTitle) {
 		MouseGetPos, X, Y
 		NewX := X - OrigX + WinX
 		NewY := Y - OrigY + WinY
-		if (SnapToGrid) {
+		if (SnapToWindows) {
+			OldX := NewX
+			NewX := LoopWindows(True, True, NewX, NewY, WinTitle, WinW)
+			if (OldX = NewX)
+				NewX := LoopWindows(True, False, NewX + WinW, NewY, WinTitle, WinH) - WinW
+
+			OldY := NewY
+			NewY := LoopWindows(False, True, NewX, NewY, WinTitle, WinH)
+			if (OldY = NewY)
+				NewY := LoopWindows(False, False, NewX, NewY + WinH, WinTitle, WinH) - WinH
+		} if (SnapToGrid) {
 			Index := LoopVs(True, NewX, NewY, 0, 1)
 			if (Index)
 				NewX := GetX(Index) + (GetCornerV(Index) ? MarginWidth : MarginWidthHalf)
@@ -195,16 +205,6 @@ ResizeMoveWindowDo(OrigX, OrigY, WinTitle) {
 				if (Index)
 					NewY := GetY(Index) - WinH - (GetCornerH(Index) ? MarginWidth : MarginWidthHalf)
 			}
-		} if (SnapToWindows) {
-			OldX := NewX
-			NewX := LoopWindows(True, True, NewX, NewY, WinTitle, WinW)
-			if (OldX = NewX)
-				NewX := LoopWindows(True, False, NewX + WinW, NewY, WinTitle, WinH) - WinW
-
-			OldY := NewY
-			NewY := LoopWindows(False, True, NewX, NewY, WinTitle, WinH)
-			if (OldY = NewY)
-				NewY := LoopWindows(False, False, NewX, NewY + WinH, WinTitle, WinH) - WinH
 		}
 		ShowPreviewAt(NewX, NewY, WinW, WinH)
 	}
