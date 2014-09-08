@@ -79,6 +79,8 @@ adjustWindow(_id)
                 WinClose, % id
             else if (rule = "maximize")
                 WinMaximize, % id
+            else if (rule = "menu")
+                DllCall("SetMenu", uint, _id, uint, value)
             else if (rule = "redraw")
             {
                 WinGetPos, X, Y, W, H, % id
