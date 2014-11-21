@@ -7,6 +7,7 @@ SendMode Input  ; Recommended for new scripts due to its superior speed and reli
 SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 SetBatchLines, -1
 SetWinDelay, -1
+SetTitleMatchMode, RegEx
 
 #include config.ahk
 
